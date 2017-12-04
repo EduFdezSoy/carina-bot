@@ -1,0 +1,8 @@
+languaje: C#
+sudo: enabled
+notifications:
+  email:
+    recipients:
+      - yo@edufdezsoy.es
+    on_success: change # default: change
+    on_failure: change # default: always
