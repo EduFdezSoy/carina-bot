@@ -1,4 +1,4 @@
-languaje: C#
+language: C#
 sudo: enabled
 notifications:
   email:
