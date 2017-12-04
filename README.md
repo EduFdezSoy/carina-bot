@@ -7,5 +7,8 @@
 Bot cruzado Telegram - Minecraft  
 
 ## To - Do  
-* Chat cruzado Telegram - Minecraft
+* Chat cruzado Telegram - Minecraft (see rcon)
 * Creador de markers para overviewer ([carina.edufdezsoy.es](carina.edufdezsoy.es))  
+* Usuarios online (en minecraft)
+* Estado del servidor (uso de cpu, ram, disco y uptime)
+* Estado del render de overviewer (se puede sacar del json que genera para la web)
