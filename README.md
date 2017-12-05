@@ -13,3 +13,6 @@ Bot cruzado Telegram - Minecraft
 * Estado del servidor (uso de cpu, ram, disco y uptime)
 * Estado del render de overviewer (se puede sacar del json que genera para la web)
 * Ejecutar comandos con privilegios en el servidor (se necesita tabla sql con privilegios)
+
+
+## SQL
