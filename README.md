@@ -2,7 +2,8 @@
 [![GitHub issues](https://img.shields.io/github/issues/EduFdezSoy/carina-bot.svg)](https://github.com/EduFdezSoy/carina-bot/issues)
 [![GitHub forks](https://img.shields.io/github/forks/EduFdezSoy/carina-bot.svg)](https://github.com/EduFdezSoy/carina-bot/network)
 [![GitHub stars](https://img.shields.io/github/stars/EduFdezSoy/carina-bot.svg)](https://github.com/EduFdezSoy/carina-bot/stargazers)
-[![GitHub license](https://img.shields.io/github/license/EduFdezSoy/carina-bot.svg)](https://github.com/EduFdezSoy/carina-bot/blob/master/LICENSE)  
+[![GitHub license](https://img.shields.io/github/license/EduFdezSoy/carina-bot.svg)](https://github.com/EduFdezSoy/carina-bot/blob/master/LICENSE)
+[![Build Status](https://travis-ci.org/EduFdezSoy/carina-bot.svg?branch=master)](https://travis-ci.org/EduFdezSoy/carina-bot)
 
 Bot cruzado Telegram - Minecraft  
 
@@ -13,6 +14,11 @@ Bot cruzado Telegram - Minecraft
 * Estado del servidor (uso de cpu, ram, disco y uptime)
 * Estado del render de overviewer (se puede sacar del json que genera para la web)
 * Ejecutar comandos con privilegios en el servidor (se necesita tabla sql con privilegios)
+* Mostrar log del servidor (ultimas lineas del archivo del log)
 
 
 ## SQL
+* Tabla usuarios (uuid minecraft <--> uuid telegram + usuarios legibles de ambos)
+* Tabla de privilegios (id interno de usuario + poder)
+* Registro de comandos enviados y respuestas (log)
+* Tabla de markers en el mapa
