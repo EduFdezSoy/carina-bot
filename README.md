@@ -15,6 +15,8 @@ Bot cruzado Telegram - Minecraft
 * Estado del render de overviewer (se puede sacar del json que genera para la web)
 * Ejecutar comandos con privilegios en el servidor (se necesita tabla sql con privilegios)
 * Mostrar log del servidor (ultimas lineas del archivo del log)
+* Listado de tareas pendientes en el servidor para no entrar y estar perdido.
+* Organizador de quedadas grupales dentro del server y posterior aviso. (en x fecha y hora).
 
 
 ## SQL
