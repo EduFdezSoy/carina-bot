@@ -17,6 +17,7 @@ Bot cruzado Telegram - Minecraft
 * Mostrar log del servidor (ultimas lineas del archivo del log)
 * Listado de tareas pendientes en el servidor (Leer, Editar y guardar log de tareas)
 * Organizador de quedadas grupales dentro del server y posterior aviso. (en x fecha y hora)
+* Capacidad de realizar copias de seguridad del server en la nube, en caso de falta de espacio se borra la antigua.
 
 
 ## SQL
