@@ -11,8 +11,8 @@ Bot cruzado Telegram - Minecraft
 :sparkles: Chat cruzado Telegram - Minecraft (see rcon).  
 :sparkles: Creador de markers para overviewer ([carina.edufdezsoy.es](carina.edufdezsoy.es)).  
 :sparkles: Capacidad de realizar copias de seguridad del server en la nube, en caso de falta de espacio se borra la antigua.  
-:star2: Estado del servidor (uso de cpu, ram, disco y uptime) e informe de estado del render de overviewer (sacar del json que genera para la web).  
-:star2: Ejecutar comandos con privilegios en el servidor (se necesita tabla sql con privilegios).  
+:star2: Estado del servidor (uso de CPU, RAM, disco y uptime) e informe de estado del render de overviewer (sacar del JSON que genera para la web).  
+:star2: Ejecutar comandos con privilegios en el servidor (se necesita tabla SQL con privilegios).  
 :star2: Listado de tareas pendientes en el servidor (Leer, Editar y guardar log de tareas).  
 :star: Mostrar log del servidor (ultimas lineas del archivo del log).  
 :star: Organizador de quedadas grupales dentro del server y posterior aviso. (en x fecha y hora).   
