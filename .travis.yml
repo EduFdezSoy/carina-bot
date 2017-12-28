@@ -2,9 +2,7 @@ language: csharp
 solution: Telegram.Bot.sln
 mono: none
 dotnet: 2.0.0
-script: 
-  - dotnet restore
-  - dotnet build
+
 notifications:
   email:
     recipients:
