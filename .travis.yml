@@ -3,45 +3,6 @@ solution: Telegram.Bot.sln
 mono: none
 dotnet: 2.0.0
 script:
-
-Skip to content
-This repository
-
-    Pull requests
-    Issues
-    Marketplace
-    Explore
-
-    @EduFdezSoy
-
-1
-2
-
-    1
-
-acastaner/acastaner.fr-mvc6
-Code
-Issues 0
-Pull requests 0
-Projects 0
-Wiki
-Insights
-
-Update travis config
-
-    master 
-
-1 parent b747dd5 commit 39ef054b1493f9fcf0bb1438f21de9b6e772ce36 Arnaud Castaner committed on 1 Jun
-Showing
-with 4 additions and 1 deletion.
-5 .travis.yml
-@@ -13,4 +13,7 @@ branches:
-     - release
- mono: none
- dotnet: 1.0.3
--dist: trusty
-+dist: trusty
-+script:
   - dotnet restore
   - dotnet build
 notifications:
