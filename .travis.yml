@@ -2,7 +2,8 @@ language: csharp
 solution: Telegram.Bot.sln
 mono: none
 dotnet: 2.0.0
-
+script:
+  - sh -c "dotnet carina-bot/carina-bot.csproj --configuration Release"
 notifications:
   email:
     recipients:
