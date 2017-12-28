@@ -25,7 +25,3 @@ Bot cruzado Telegram - Minecraft
 * Tabla de privilegios (id interno de usuario + poder).
 * Registro de comandos enviados y respuestas (log).
 * Tabla de markers en el mapa.
-
-
-## Things to fix
-* Search how to make travis work with this repo. Actually it says: "No solution or script defined, exiting".  
