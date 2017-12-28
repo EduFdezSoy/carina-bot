@@ -3,8 +3,8 @@ solution: Telegram.Bot.sln
 mono: none
 dotnet: 2.0.0
 script: 
-    - dotnet restore
-    - dotnet build
+  - dotnet restore
+  - dotnet build
 notifications:
   email:
     recipients:
@@ -28,3 +28,5 @@ notifications:
 # TelegramBot_RegularMemberUserId           9876
 # TelegramBot_RegularMemberUserName         main_tester
 # TelegramBot_RegularMemberPrivateChatId    9876
+
+
