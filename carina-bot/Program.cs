@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -10,11 +11,21 @@ using Telegram.Bot.Types.InlineKeyboardButtons;
 using Telegram.Bot.Types.InlineQueryResults;
 using Telegram.Bot.Types.InputMessageContents;
 using Telegram.Bot.Types.ReplyMarkups;
+using CoreRCON;
+using CoreRCON.Parsers.Standard;
 
 namespace carina_bot
 {
     class Program
     {
+        // configuracion de mc 
+        private static readonly string mc_ip = "";
+        private static readonly ushort mc_port = 25575;
+        private static readonly string mc_pw = "";
+        // Connect to mc server
+        private static readonly RCON rcon = new RCON(IPAddress.Parse(mc_ip), mc_port, mc_pw);
+
+        // configuracion de telegram
         private static readonly TelegramBotClient Bot = new TelegramBotClient("505529943:AAHCXZmz5Ip2yfT11_WYAsVbZc2loqOq6JY");
 
         static void Main(string[] args)
@@ -29,11 +40,19 @@ namespace carina_bot
             var me = Bot.GetMeAsync().Result;
 
             Console.Title = me.Username;
-
+            
             Bot.StartReceiving();
             Console.WriteLine($"Start listening for @{me.Username}");
+
             Console.ReadLine();
             Bot.StopReceiving();
+        }
+
+        private static async void MandarMsgMine(string user, string msg)
+        {
+            // Send message
+            string tarea = await rcon.SendCommandAsync("say §9<" + user + "> " + msg);
+            Console.WriteLine($"{tarea}");
         }
 
         private static async void BotOnMessageReceived(object sender, MessageEventArgs messageEventArgs)
@@ -46,10 +65,26 @@ namespace carina_bot
 
             switch (message.Text.Split(' ').First())
             {
+                // send message to minecraft server
+                case "/mc":
+                    string texto = message.Text;
+                    if (texto == "/mc")
+                    {
+                        await Bot.SendTextMessageAsync(message.Chat.Id, "manda algo con el /mc, vacío no me vale.");
+                        await Task.Delay(250); // simulate longer running task
+                        await Bot.SendTextMessageAsync(message.Chat.Id, "ejemplo: /mc penes");
+                    }
+                    else
+                    { 
+                        texto = texto.Substring(4, texto.Length - 4);
+                        string usuario = message.From.Username;
+                        MandarMsgMine(usuario, texto);
+                    }
+                    break;
+
                 // send inline keyboard
                 case "/inline":
                     await Bot.SendChatActionAsync(message.Chat.Id, ChatAction.Typing);
-
                     await Task.Delay(500); // simulate longer running task
 
                     keyboard = new InlineKeyboardMarkup(new[]
@@ -135,6 +170,9 @@ namespace carina_bot
 
                 default:
                     const string usage = @"Usage:
+/mc msg - send a mesage to Minecraft Server
+
+Test Commands:
 /inline   - send inline keyboard
 /keyboard - send custom keyboard
 /photo    - send a photo
