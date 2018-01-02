@@ -2,6 +2,7 @@
 using System.Net;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Telegram.Bot;
 using Telegram.Bot.Args;
@@ -12,22 +13,25 @@ using Telegram.Bot.Types.InlineQueryResults;
 using Telegram.Bot.Types.InputMessageContents;
 using Telegram.Bot.Types.ReplyMarkups;
 using CoreRCON;
-using CoreRCON.Parsers.Standard;
 
 namespace carina_bot
 {
     class Program
     {
+        // configuracion de telegram
+        private static readonly TelegramBotClient Bot = new TelegramBotClient("12345:asdfghjkl");
+
         // configuracion de mc 
-        private static readonly string mc_ip = "";
+        private static readonly string mc_ip = "123.123.123.123";
         private static readonly ushort mc_port = 25575;
-        private static readonly string mc_pw = "";
+        private static readonly string mc_pw = "asd";
+        private static readonly long mc_group = -123;
+        private static readonly string mc_log = "/home/minecraft/logs/latest.log";
+
         // Connect to mc server
         private static readonly RCON rcon = new RCON(IPAddress.Parse(mc_ip), mc_port, mc_pw);
 
-        // configuracion de telegram
-        private static readonly TelegramBotClient Bot = new TelegramBotClient("505529943:AAHCXZmz5Ip2yfT11_WYAsVbZc2loqOq6JY");
-
+        
         static void Main(string[] args)
         {
             Bot.OnMessage += BotOnMessageReceived;
@@ -39,11 +43,13 @@ namespace carina_bot
 
             var me = Bot.GetMeAsync().Result;
 
-            Console.Title = me.Username;
+            Console.Title = "@" + me.Username + " - Press Intro to exit";
             
             Bot.StartReceiving();
             Console.WriteLine($"Start listening for @{me.Username}");
-
+            Console.WriteLine();
+            Console.WriteLine("Press Intro to exit.");
+            LeerMsgMine();
             Console.ReadLine();
             Bot.StopReceiving();
         }
@@ -53,6 +59,52 @@ namespace carina_bot
             // Send message
             string tarea = await rcon.SendCommandAsync("say §9<" + user + "> " + msg);
             Console.WriteLine($"{tarea}");
+        }
+
+        private static async void LeerMsgMine()
+        {
+            // pillamos el archivito (revisemos esto mas tarde, quizás nos conviene más hacerlo en el main o fuera del programa una sola vez)
+            using (FileStream logFile = System.IO.File.Open(mc_log, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            {
+                long position = logFile.Length;
+
+                // vamos a la posición que tenemos guardada
+                logFile.Position = position;
+
+                using (StreamReader reader = new StreamReader(logFile))
+                {
+                    string line;
+
+                    do
+                    {
+                        while ((line = await reader.ReadLineAsync()) != null)
+                        {
+                            if (line == "")
+                                continue;
+
+                            // si la linea no es de Chat, la ignoramos tambien
+                            // tenemos que añadir el try catch por ciertas lineas salvajes que hagan petar
+                            try
+                            {
+                                if (line.Substring(12, 17) != "Async Chat Thread")
+                                    continue;
+                            }
+                            catch (Exception e)
+                            {
+                                Console.WriteLine("Error: " + e.Message);
+                                continue;
+                            }
+
+                            string texto = line.Substring(42, line.Length - 42);
+
+                            Console.WriteLine(texto);
+                            await Bot.SendTextMessageAsync(mc_group, texto);
+                        }
+                        position = logFile.Position; // guardamos la posicion donde nos encontramos en nuestra variable 
+                        await Task.Delay(250);
+                    } while (true);
+                }
+            }
         }
 
         private static async void BotOnMessageReceived(object sender, MessageEventArgs messageEventArgs)
@@ -80,6 +132,11 @@ namespace carina_bot
                         string usuario = message.From.Username;
                         MandarMsgMine(usuario, texto);
                     }
+                    break;
+
+                // return chat id
+                case "/chat":
+                    await Bot.SendTextMessageAsync(message.Chat.Id, "El id de este chat es " + message.Chat.Id);
                     break;
 
                 // send inline keyboard
@@ -167,10 +224,11 @@ namespace carina_bot
                         "Who or Where are you?",
                         replyMarkup: keyboard);
                     break;
-
+                case "/help":
                 default:
                     const string usage = @"Usage:
 /mc msg - send a mesage to Minecraft Server
+/chat   - return the chat ID of this chat
 
 Test Commands:
 /inline   - send inline keyboard
