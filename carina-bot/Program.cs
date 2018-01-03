@@ -97,6 +97,10 @@ namespace carina_bot
                             line = line.Substring(42, line.Length - 42);
                             line = line.Trim();
 
+                            // si tiene un [m detrás (que no sabemos de donde sale) se lo quitamos
+                            if (line.Substring(line.Length - 2, 2) == "[m")
+                                line = line.Substring(0, line.Length - 2);
+
                             // imprimimos y mandamos al Telegram
                             Console.WriteLine(line);
                             await Bot.SendTextMessageAsync(mc_group, line);
