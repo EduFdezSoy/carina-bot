@@ -2,7 +2,6 @@
 using System.Net;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Telegram.Bot;
 using Telegram.Bot.Args;
@@ -50,6 +49,7 @@ namespace carina_bot
             Console.WriteLine($"Start listening for @{me.Username}");
             Console.WriteLine();
             Console.WriteLine("Press Intro to exit.");
+            Console.WriteLine();
             LeerMsgMine();
             Console.ReadLine();
             Bot.StopReceiving();
@@ -67,15 +67,12 @@ namespace carina_bot
             // pillamos el archivito (revisemos esto mas tarde, quizás nos conviene más hacerlo en el main o fuera del programa una sola vez)
             using (FileStream logFile = System.IO.File.Open(mc_log, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
             {
-                long position = logFile.Length;
-
-                // vamos a la posición que tenemos guardada
-                logFile.Position = position;
+                // nos vamos a la ultima posición
+                logFile.Position = logFile.Length;
 
                 using (StreamReader reader = new StreamReader(logFile))
                 {
                     string line;
-
                     do
                     {
                         while ((line = await reader.ReadLineAsync()) != null)
@@ -96,12 +93,14 @@ namespace carina_bot
                                 continue;
                             }
 
-                            string texto = line.Substring(42, line.Length - 42);
+                            // cortamos y hacemos trim
+                            line = line.Substring(42, line.Length - 42);
+                            line = line.Trim();
 
-                            Console.WriteLine(texto);
-                            await Bot.SendTextMessageAsync(mc_group, texto);
+                            // imprimimos y mandamos al Telegram
+                            Console.WriteLine(line);
+                            await Bot.SendTextMessageAsync(mc_group, line);
                         }
-                        position = logFile.Position; // guardamos la posicion donde nos encontramos en nuestra variable 
 
                         // a las 00:00:00 se resetea el log, y nosotros reseteamos el contador
                         if (DateTime.Now.Hour == 0 && DateTime.Now.Minute == 0 && DateTime.Now.Second == 0)
