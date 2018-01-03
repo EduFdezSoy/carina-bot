@@ -19,14 +19,15 @@ namespace carina_bot
     class Program
     {
         // configuracion de telegram
-        private static readonly TelegramBotClient Bot = new TelegramBotClient("12345:asdfghjkl");
+        private static readonly TelegramBotClient Bot = new TelegramBotClient("98764321:qwertyuiop");
 
         // configuracion de mc 
         private static readonly string mc_ip = "123.123.123.123";
         private static readonly ushort mc_port = 25575;
-        private static readonly string mc_pw = "asd";
-        private static readonly long mc_group = -123;
-        private static readonly string mc_log = "/home/minecraft/logs/latest.log";
+        private static readonly string mc_pw = "asdfghjkl";
+        private static readonly long mc_group = -123456;
+        private static readonly string mc_log = "C:/Users/edufd/Desktop/latest.log";
+           // "/home/ubuntu/minecraft/logs/latest.log";
 
         // Connect to mc server
         private static readonly RCON rcon = new RCON(IPAddress.Parse(mc_ip), mc_port, mc_pw);
@@ -101,7 +102,19 @@ namespace carina_bot
                             await Bot.SendTextMessageAsync(mc_group, texto);
                         }
                         position = logFile.Position; // guardamos la posicion donde nos encontramos en nuestra variable 
+
+                        // a las 00:00:00 se resetea el log, y nosotros reseteamos el contador
+                        if (DateTime.Now.Hour == 0 && DateTime.Now.Minute == 0 && DateTime.Now.Second == 0)
+                        {
+                            Console.WriteLine("[{0}:{1}] - El log se ha reseteado, reiniciemos el contador.", DateTime.Now.Hour, DateTime.Now.Minute);
+                            logFile.Position = 0;
+
+                            // esperamos 1 segundo para que no vuelva a entrar aqui hasta el dia siguiente
+                            await Task.Delay(1000);
+                        }
+
                         await Task.Delay(250);
+
                     } while (true);
                 }
             }
