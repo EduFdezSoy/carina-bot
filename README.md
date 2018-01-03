@@ -9,7 +9,7 @@ Bot cruzado Telegram - Minecraft
 
 ## To - Do  
 :sparkles: Chat cruzado Telegram - Minecraft (see rcon). :heavy_check_mark:  
- :exclamation: A las 12 todos los dias el log empieza de 0, el programa no está preparado para ello.  
+ :exclamation: A las 12 todos los dias el log empieza de 0, el programa no está preparado para ello. :heavy_check_mark:  
 :sparkles: Creador de markers para overviewer ([carina.edufdezsoy.es](carina.edufdezsoy.es)).  
 :sparkles: Capacidad de realizar copias de seguridad del server en la nube, en caso de falta de espacio se borra la antigua.  
 :star2: Estado del servidor (uso de CPU, RAM, disco y uptime) e informe de estado del render de overviewer (sacar del JSON que genera para la web).  
