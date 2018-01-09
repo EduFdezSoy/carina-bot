@@ -110,7 +110,7 @@ namespace carina_bot
                         if (DateTime.Now.Hour == 0 && DateTime.Now.Minute == 0 && DateTime.Now.Second == 0)
                         {
                             Console.WriteLine("[{0}:{1}] - El log se ha reseteado, reiniciemos el contador.", DateTime.Now.Hour, DateTime.Now.Minute);
-                            logFile.Position = 0;
+                            logFile.Position = logFile.Length;
 
                             // esperamos 1 segundo para que no vuelva a entrar aqui hasta el dia siguiente
                             await Task.Delay(1000);
