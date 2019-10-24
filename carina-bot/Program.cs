@@ -50,7 +50,7 @@ namespace carina_bot
             Console.WriteLine();
             Console.WriteLine("Press Intro to exit.");
             Console.WriteLine();
-            LeerMsgMine();
+            MineToTelegramChat(false);
             Console.ReadLine();
             Bot.StopReceiving();
         }
@@ -62,67 +62,46 @@ namespace carina_bot
             Console.WriteLine($"{tarea}");
         }
 
-        private static async void LeerMsgMine()
+ 
+		/// <summary>
+        /// Mandar mensaje del Minecraft al Telegram
+        /// </summary>
+        private static async void MineToTelegramChat(bool forceReload)
         {
-            // pillamos el archivito (revisemos esto mas tarde, quizás nos conviene más hacerlo en el main o fuera del programa una sola vez)
-            using (FileStream logFile = System.IO.File.Open(mc_log, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            do
             {
-                // nos vamos a la ultima posición
-                logFile.Position = logFile.Length;
-
-                using (StreamReader reader = new StreamReader(logFile))
+                try
                 {
-                    string line;
-                    do
+                    //Abro el fichero en modo lectura para que windows pueda leerlo.
+                    using (var fs = new FileStream(mc_log, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                     {
-                        while ((line = await reader.ReadLineAsync()) != null)
+                        using (var sr = new StreamReader(fs, System.Text.Encoding.UTF8))//Importante el UTF8 para que se pueda leer correctamente
                         {
-                            if (line == "")
-                                continue;
+                            sr.ReadToEnd();//Hace que el stream del flujo se vaya al final del archivo para que pueda leer las ultimas lineas
+                            string ultimaLinea = sr.ReadLine();
 
-                            // si la linea no es de Chat, la ignoramos tambien
-                            // tenemos que añadir el try catch por ciertas lineas salvajes que hagan petar
-                            try
+                            string nuevaLinea = sr.ReadLine();
+
+                            if (ultimaLinea != nuevaLinea && nuevaLinea != null && !nuevaLinea.Contains("[Rcon]"))//Cuando el stream termina de leer se pone a null y hace que escriba null en el telegram. Para ello si es null, no se escribe. Y si viene de RCON tampoco.
                             {
-                                if (line.Substring(12, 17) != "Async Chat Thread")
-                                    continue;
+                                ultimaLinea = nuevaLinea;
+                                await Bot.SendTextMessageAsync(mc_group, nuevaLinea, ParseMode.Default, false, true);
                             }
-                            catch (Exception e)
+                            if (forceReload)
                             {
-                                Console.WriteLine("Error: " + e.Message);
-                                continue;
+                                await Bot.SendTextMessageAsync(mc_group, "Se ha recargado el archivo log del servidor.");
+                                forceReload = false;
                             }
-
-                            // cortamos y hacemos trim
-                            line = line.Substring(42, line.Length - 42);
-                            line = line.Trim();
-
-                            // si tiene un [m detrás (que no sabemos de donde sale) se lo quitamos
-                            if (line.Substring(line.Length - 2, 2) == "[m")
-                                line = line.Substring(0, line.Length - 2);
-
-                            // imprimimos y mandamos al Telegram
-                            Console.WriteLine(line);
-                            await Bot.SendTextMessageAsync(mc_group, line);
                         }
-
-                        // a las 00:00:00 se resetea el log, y nosotros reseteamos el contador
-                        if (DateTime.Now.Hour == 0 && DateTime.Now.Minute == 0 && DateTime.Now.Second == 0)
-                        {
-                            Console.WriteLine("[{0}:{1}] - El log se ha reseteado, reiniciemos el contador.", DateTime.Now.Hour, DateTime.Now.Minute);
-                            logFile.Position = logFile.Length;
-
-                            // esperamos 1 segundo para que no vuelva a entrar aqui hasta el dia siguiente
-                            await Task.Delay(1000);
-                        }
-
-                        await Task.Delay(250);
-
-                    } while (true);
+                    }
                 }
-            }
+                catch (Exception)
+                {
+                    await Bot.SendTextMessageAsync(mc_group, "No se pudo acceder al archivo log, intentando volver a conectar. Manualmente puedes usar /reloadlog para intentar recargarlo.");
+                }
+            } while (true);
         }
-
+ 
         private static async void BotOnMessageReceived(object sender, MessageEventArgs messageEventArgs)
         {
             var message = messageEventArgs.Message;
@@ -151,106 +130,25 @@ namespace carina_bot
                     break;
 
                 // return chat id
-                case "/chat":
+                case "/chatid":
                     await Bot.SendTextMessageAsync(message.Chat.Id, "El id de este chat es " + message.Chat.Id);
                     break;
 
-                // send inline keyboard
-                case "/inline":
-                    await Bot.SendChatActionAsync(message.Chat.Id, ChatAction.Typing);
-                    await Task.Delay(500); // simulate longer running task
-
-                    keyboard = new InlineKeyboardMarkup(new[]
-                    {
-                        new [] // first row
-                        {
-                            InlineKeyboardButton.WithCallbackData("1.1"),
-                            InlineKeyboardButton.WithCallbackData("1.2"),
-                        },
-                        new [] // second row
-                        {
-                            InlineKeyboardButton.WithCallbackData("2.1"),
-                            InlineKeyboardButton.WithCallbackData("2.2"),
-                        }
-                    });
-
-                    await Bot.SendTextMessageAsync(
-                        message.Chat.Id,
-                        "Choose",
-                        replyMarkup: keyboard);
-                    break;
-
-                // send custom keyboard
-                case "/keyboard":
-                    keyboard = new ReplyKeyboardMarkup(new[]
-                    {
-                        new [] // first row
-                        {
-                            new KeyboardButton("1.1"),
-                            new KeyboardButton("1.2"),
-                        },
-                        new [] // last row
-                        {
-                            new KeyboardButton("2.1"),
-                            new KeyboardButton("2.2"),
-                        }
-                    });
-
-                    await Bot.SendTextMessageAsync(
-                        message.Chat.Id,
-                        "Choose",
-                        replyMarkup: keyboard);
-                    break;
-
-                // send a photo
-                case "/photo":
-                    await Bot.SendChatActionAsync(message.Chat.Id, ChatAction.UploadPhoto);
-
-                    const string file = @"Files/tux.png";
-
-                    var fileName = file.Split(Path.DirectorySeparatorChar).Last();
-
-                    using (var fileStream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read))
-                    {
-                        var fts = new FileToSend(fileName, fileStream);
-
-                        await Bot.SendPhotoAsync(
-                            message.Chat.Id,
-                            fts,
-                            "Nice Picture");
-                    }
-                    break;
-
-                // request location or contact
-                case "/request":
-                    keyboard = new ReplyKeyboardMarkup(new[]
-                    {
-                        new KeyboardButton("Location")
-                        {
-                            RequestLocation = true
-                        },
-                        new KeyboardButton("Contact")
-                        {
-                            RequestContact = true
-                        },
-                    });
-
-                    await Bot.SendTextMessageAsync(
-                        message.Chat.Id,
-                        "Who or Where are you?",
-                        replyMarkup: keyboard);
+                //Fuerza a recargar el log del servidor (en caso de que algo no vaya bien)
+                case "/reloadlog":
+                    await Bot.SendTextMessageAsync(message.Chat.Id, "Recargando el módulo de log del bot...");
+                    MineToTelegramChat(true);
                     break;
                 case "/help":
                 default:
                     const string usage = @"Usage:
-/mc msg - send a mesage to Minecraft Server
-/chat   - return the chat ID of this chat
-
-Test Commands:
-/inline   - send inline keyboard
-/keyboard - send custom keyboard
-/photo    - send a photo
-/request  - request location or contact
+/mc        - send a mesage to Minecraft Server
+/chat      - return the chat ID of this chat
+/status    - checks server estatus (online/offline)
+/craft     - Send a photo with crafting recipe (ex: /craft planks)
+/command   - Send teminal commands on the server.
+/reloadlog - Manuelly reload the log file server.
+/chatid    - Get this chat id.
 ";
 
                     await Bot.SendTextMessageAsync(
