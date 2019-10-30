@@ -1,256 +1,219 @@
-﻿using System;
-using System.Net;
+﻿using CoreRCON;
+using System;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
+using System.Net;
 using Telegram.Bot;
 using Telegram.Bot.Args;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using Telegram.Bot.Types.InlineKeyboardButtons;
-using Telegram.Bot.Types.InlineQueryResults;
-using Telegram.Bot.Types.InputMessageContents;
 using Telegram.Bot.Types.ReplyMarkups;
-using CoreRCON;
+
+using Microsoft.Extensions.Configuration;
+
+
 
 namespace carina_bot
 {
     class Program
     {
+        //Configuration
+        static readonly IConfiguration config = new ConfigurationBuilder()
+           .SetBasePath(Directory.GetCurrentDirectory())
+          .AddJsonFile("appsettings.json")
+          .Build();
         // configuracion de telegram
-        private static readonly TelegramBotClient Bot = new TelegramBotClient("98764321:qwertyuiop");
+        private static readonly TelegramBotClient Bot = new TelegramBotClient(config["BOT_TOKEN"]);
 
         // configuracion de mc 
-        private static readonly string mc_ip = "123.123.123.123";
-        private static readonly ushort mc_port = 25575;
-        private static readonly string mc_pw = "asdfghjkl";
-        private static readonly long mc_group = -123456;
-        private static readonly string mc_log = "C:/Users/edufd/Desktop/latest.log";
-           // "/home/ubuntu/minecraft/logs/latest.log";
+        private static readonly string mc_ip = config["RCON_IP"];
+        private static readonly ushort mc_port = ushort.Parse(config["RCON_PORT"]);
+        private static readonly string mc_pw = config["RCON_PASSWORD"];
+        private static readonly long mc_group = long.Parse(config["TELEGRAM_GROUP_ID"]);
+        private static readonly string mc_log = config["PATH_LOG_FILE"];
+        private static readonly string craftImgFolderPath = config["PATH_CRAFTING_FOLDER"];
 
         // Connect to mc server
         private static readonly RCON rcon = new RCON(IPAddress.Parse(mc_ip), mc_port, mc_pw);
 
-        
-        static void Main(string[] args)
+
+        //Mover a clase constantes
+        private const string Si = "Sí estoy seguro.";
+        private const string No = "No, llevame atrás.";
+
+        static void Main()
         {
+
+            //Eventos del Bot de telegram
             Bot.OnMessage += BotOnMessageReceived;
             Bot.OnMessageEdited += BotOnMessageReceived;
             Bot.OnCallbackQuery += BotOnCallbackQueryReceived;
-            Bot.OnInlineQuery += BotOnInlineQueryReceived;
-            Bot.OnInlineResultChosen += BotOnChosenInlineResultReceived;
             Bot.OnReceiveError += BotOnReceiveError;
 
             var me = Bot.GetMeAsync().Result;
 
-            Console.Title = "@" + me.Username + " - Press Intro to exit";
-            
+            Console.Title = "@" + me.Username + " - Press Enter to exit";
+
             Bot.StartReceiving();
             Console.WriteLine($"Start listening for @{me.Username}");
             Console.WriteLine();
             Console.WriteLine("Press Intro to exit.");
             Console.WriteLine();
-            LeerMsgMine();
+            MineToTelegramChat(false);
             Console.ReadLine();
             Bot.StopReceiving();
         }
 
+        /// <summary>
+        /// Mandar mensaje del telegram al Minecraft
+        /// </summary>
+        /// <param name="user">Usuario del telegram</param>
+        /// <param name="msg">Mensaje a enviar</param>
         private static async void MandarMsgMine(string user, string msg)
         {
-            // Send message
             string tarea = await rcon.SendCommandAsync("say §9<" + user + "> " + msg);
             Console.WriteLine($"{tarea}");
         }
 
-        private static async void LeerMsgMine()
+        /// <summary>
+        /// Mandar mensaje del telegram al Minecraft
+        /// </summary>
+        /// <param name="user">Usuario del telegram</param>
+        /// <param name="msg">Mensaje a enviar</param>
+        private static async void MandarMsgMine(string comando)
         {
-            // pillamos el archivito (revisemos esto mas tarde, quizás nos conviene más hacerlo en el main o fuera del programa una sola vez)
-            using (FileStream logFile = System.IO.File.Open(mc_log, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-            {
-                // nos vamos a la ultima posición
-                logFile.Position = logFile.Length;
-
-                using (StreamReader reader = new StreamReader(logFile))
-                {
-                    string line;
-                    do
-                    {
-                        while ((line = await reader.ReadLineAsync()) != null)
-                        {
-                            if (line == "")
-                                continue;
-
-                            // si la linea no es de Chat, la ignoramos tambien
-                            // tenemos que añadir el try catch por ciertas lineas salvajes que hagan petar
-                            try
-                            {
-                                if (line.Substring(12, 17) != "Async Chat Thread")
-                                    continue;
-                            }
-                            catch (Exception e)
-                            {
-                                Console.WriteLine("Error: " + e.Message);
-                                continue;
-                            }
-
-                            // cortamos y hacemos trim
-                            line = line.Substring(42, line.Length - 42);
-                            line = line.Trim();
-
-                            // si tiene un [m detrás (que no sabemos de donde sale) se lo quitamos
-                            if (line.Substring(line.Length - 2, 2) == "[m")
-                                line = line.Substring(0, line.Length - 2);
-
-                            // imprimimos y mandamos al Telegram
-                            Console.WriteLine(line);
-                            await Bot.SendTextMessageAsync(mc_group, line);
-                        }
-
-                        // a las 00:00:00 se resetea el log, y nosotros reseteamos el contador
-                        if (DateTime.Now.Hour == 0 && DateTime.Now.Minute == 0 && DateTime.Now.Second == 0)
-                        {
-                            Console.WriteLine("[{0}:{1}] - El log se ha reseteado, reiniciemos el contador.", DateTime.Now.Hour, DateTime.Now.Minute);
-                            logFile.Position = logFile.Length;
-
-                            // esperamos 1 segundo para que no vuelva a entrar aqui hasta el dia siguiente
-                            await Task.Delay(1000);
-                        }
-
-                        await Task.Delay(250);
-
-                    } while (true);
-                }
-            }
+            string tarea = await rcon.SendCommandAsync(comando);
+            Console.WriteLine($"{tarea}");
         }
 
+        /// <summary>
+        /// Mandar mensaje del Minecraft al Telegram
+        /// </summary>
+        private static async void MineToTelegramChat(bool forceReload)
+        {
+            do
+            {
+                try
+                {
+                    //Abro el fichero en modo lectura para que windows pueda leerlo.
+                    using (var fs = new FileStream(mc_log, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                    {
+                        using (var sr = new StreamReader(fs, System.Text.Encoding.UTF8))//Importante el UTF8 para que se pueda leer correctamente
+                        {
+                            sr.ReadToEnd();//Hace que el stream del flujo se vaya al final del archivo para que pueda leer las ultimas lineas
+                            string ultimaLinea = sr.ReadLine();
+
+                            string nuevaLinea = sr.ReadLine();
+
+                            if (ultimaLinea != nuevaLinea && nuevaLinea != null && !nuevaLinea.Contains("[Rcon]"))//Cuando el stream termina de leer se pone a null y hace que escriba null en el telegram. Para ello si es null, no se escribe. Y si viene de RCON tampoco.
+                            {
+                                ultimaLinea = nuevaLinea;
+                                await Bot.SendTextMessageAsync(mc_group, nuevaLinea, ParseMode.Default, false, true);
+                            }
+                            if (forceReload)
+                            {
+                                await Bot.SendTextMessageAsync(mc_group, "Se ha recargado el archivo log del servidor.");
+                                forceReload = false;
+                            }
+                        }
+                    }
+                }
+                catch (Exception)
+                {
+                    await Bot.SendTextMessageAsync(mc_group, "No se pudo acceder al archivo log, intentando volver a conectar. Manualmente puedes usar /reloadlog para intentar recargarlo.");
+                }
+            } while (true);
+        }
+
+        
+        /// <summary>
+        /// Metodo de control de comandos
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="messageEventArgs"></param>
         private static async void BotOnMessageReceived(object sender, MessageEventArgs messageEventArgs)
         {
             var message = messageEventArgs.Message;
 
             if (message == null || message.Type != MessageType.TextMessage) return;
 
-            IReplyMarkup keyboard = new ReplyKeyboardRemove();
 
             switch (message.Text.Split(' ').First())
             {
-                // send message to minecraft server
+                //Fuerza a recargar el log del servidor (en caso de que algo no vaya bien)
+                case "/reloadlog":
+                    await Bot.SendTextMessageAsync(message.Chat.Id, "Recargando el módulo de log del bot...");
+                    MineToTelegramChat(true);
+                    break;
+
+                //Envia mensaje al minecraft
                 case "/mc":
                     string texto = message.Text;
                     if (texto == "/mc")
                     {
                         await Bot.SendTextMessageAsync(message.Chat.Id, "manda algo con el /mc, vacío no me vale.");
-                        await Task.Delay(250); // simulate longer running task
                         await Bot.SendTextMessageAsync(message.Chat.Id, "ejemplo: /mc penes");
                     }
                     else
-                    { 
+                    {
                         texto = texto.Substring(4, texto.Length - 4);
                         string usuario = message.From.Username;
                         MandarMsgMine(usuario, texto);
                     }
                     break;
 
-                // return chat id
+                //Devuelve el ID del chat
                 case "/chat":
                     await Bot.SendTextMessageAsync(message.Chat.Id, "El id de este chat es " + message.Chat.Id);
                     break;
 
-                // send inline keyboard
-                case "/inline":
-                    await Bot.SendChatActionAsync(message.Chat.Id, ChatAction.Typing);
-                    await Task.Delay(500); // simulate longer running task
-
-                    keyboard = new InlineKeyboardMarkup(new[]
-                    {
-                        new [] // first row
-                        {
-                            InlineKeyboardButton.WithCallbackData("1.1"),
-                            InlineKeyboardButton.WithCallbackData("1.2"),
-                        },
-                        new [] // second row
-                        {
-                            InlineKeyboardButton.WithCallbackData("2.1"),
-                            InlineKeyboardButton.WithCallbackData("2.2"),
-                        }
-                    });
-
-                    await Bot.SendTextMessageAsync(
-                        message.Chat.Id,
-                        "Choose",
-                        replyMarkup: keyboard);
+                //Comprobar el estado del servidor
+                case "/status":
+                    await Bot.SendTextMessageAsync(mc_group, ServerPing.GetPing(mc_ip));
                     break;
 
-                // send custom keyboard
-                case "/keyboard":
-                    keyboard = new ReplyKeyboardMarkup(new[]
-                    {
-                        new [] // first row
-                        {
-                            new KeyboardButton("1.1"),
-                            new KeyboardButton("1.2"),
-                        },
-                        new [] // last row
-                        {
-                            new KeyboardButton("2.1"),
-                            new KeyboardButton("2.2"),
-                        }
-                    });
 
-                    await Bot.SendTextMessageAsync(
-                        message.Chat.Id,
-                        "Choose",
-                        replyMarkup: keyboard);
+
+                //Envia una foto del crafteo que le pidas
+                case "/craft":
+                    BuscarCrafteo(message.Text, message.MessageId);
                     break;
 
-                // send a photo
-                case "/photo":
-                    await Bot.SendChatActionAsync(message.Chat.Id, ChatAction.UploadPhoto);
-
-                    const string file = @"Files/tux.png";
-
-                    var fileName = file.Split(Path.DirectorySeparatorChar).Last();
-
-                    using (var fileStream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read))
+                //Envia una foto del crafteo que le pidas
+                case "/command":
+                    string comando = message.Text;
+                    Console.WriteLine(comando);
+                    if (comando == "/command")
                     {
-                        var fts = new FileToSend(fileName, fileStream);
-
-                        await Bot.SendPhotoAsync(
-                            message.Chat.Id,
-                            fts,
-                            "Nice Picture");
+                        await Bot.SendTextMessageAsync(message.Chat.Id, "manda algo con el /command, vacío no me vale.");
+                        await Bot.SendTextMessageAsync(message.Chat.Id, "ejemplo: /command /give");
+                        await Bot.SendTextMessageAsync(message.Chat.Id, "SOLO el admin del grupo puede crear comandos");
+                    }
+                    else
+                    {
+                        //MandarComandoServer(comando, messageEventArgs);
+                        string[] comandos = comando.Split(' ');
+                        string aux = string.Empty;
+                        for (int i = 1; i < comandos.Length; i++)
+                        {
+                            Console.WriteLine("[" + i + "]: " + comandos[i]);
+                            aux += comandos[i] + " ";
+                        }
+                        MandarMsgMine(aux.TrimEnd());
+                        await Bot.SendTextMessageAsync(message.Chat.Id, "Se ha aplicado este comando al servidor:\n" + aux.TrimEnd(), ParseMode.Default, false, false, message.MessageId);
                     }
                     break;
 
-                // request location or contact
-                case "/request":
-                    keyboard = new ReplyKeyboardMarkup(new[]
-                    {
-                        new KeyboardButton("Location")
-                        {
-                            RequestLocation = true
-                        },
-                        new KeyboardButton("Contact")
-                        {
-                            RequestContact = true
-                        },
-                    });
-
-                    await Bot.SendTextMessageAsync(
-                        message.Chat.Id,
-                        "Who or Where are you?",
-                        replyMarkup: keyboard);
-                    break;
+                //Envia un texto con los comandos básicos
                 case "/help":
                 default:
                     const string usage = @"Usage:
 /mc msg - send a mesage to Minecraft Server
 /chat   - return the chat ID of this chat
+/status - checks server estatus (online/offline)
+/craft  - Send a photo with crafting recipe (ex: /craft planks)
+/command- Send teminal commands on the server.
 
-Test Commands:
-/inline   - send inline keyboard
-/keyboard - send custom keyboard
-/photo    - send a photo
-/request  - request location or contact
 ";
 
                     await Bot.SendTextMessageAsync(
@@ -261,6 +224,89 @@ Test Commands:
             }
         }
 
+        private static async void MandarComandoServer(string comando, MessageEventArgs e)
+        {
+            await Bot.SendTextMessageAsync(e.Message.Chat.Id, "¿Estás seguro de querer ejecutar un comando en el servidor? ¡Eso son trampas! ", replyMarkup: new ReplyKeyboardMarkup(new[]
+                {
+                    new KeyboardButton(No),
+                    new KeyboardButton(Si),
+                }));
+
+            switch (e.Message.Text)
+            {
+                case No:
+                    await Bot.SendTextMessageAsync(e.Message.Chat.Id, "Envio de comando cancelado");
+                    break;
+                case Si:
+                    string[] comandos = comando.Split(' ');
+                    string aux = string.Empty;
+                    for (int i = 1; i < comandos.Length; i++)
+                    {
+                        Console.WriteLine("[" + i + "]: " + comandos[i]);
+                        aux += comandos[i] + " ";
+                    }
+                    MandarMsgMine(aux.TrimEnd());
+                    await Bot.SendTextMessageAsync(e.Message.Chat.Id, "Se ha aplicado este comando al servidor: " + aux.TrimEnd(), ParseMode.Default, false, false, e.Message.MessageId);
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Este método busca en el directorio de los crafteos, el pedido por el usuario y lo manda al telegram.
+        /// </summary>
+        /// <param name="craftName">Nombre del crafteo</param>
+        /// <param name="id">Id del mensaje</param>
+        private static async void BuscarCrafteo(string craftName, int id)
+        {
+            if (craftName == "/craft")
+            {
+
+                await Bot.SendTextMessageAsync(mc_group, "te enseña un crafteo /craft, vacío no me vale.");
+                await Bot.SendTextMessageAsync(mc_group, "ejemplo: /craft planks");
+            }
+            else
+            {
+
+                Console.WriteLine(craftName);
+                string separadas;
+
+                separadas = craftName.Split(' ').Last();
+                Console.WriteLine(separadas);
+
+                try
+                {
+                    DirectoryInfo imgCraftFolder = new DirectoryInfo(craftImgFolderPath);
+                    FileInfo[] filesInDir = imgCraftFolder.GetFiles(separadas + "*.*");
+
+                    foreach (FileInfo foundFile in filesInDir)
+                    {
+                        craftName = foundFile.FullName;
+                        Console.WriteLine("Buscando la imagen: " + craftName);
+                    }
+
+
+                    using (var stream = System.IO.File.Open(craftName, FileMode.Open))
+                    {
+                        FileToSend fts = new FileToSend();
+                        fts.Content = stream;
+                        fts.Filename = craftName.Split('\\').Last();
+                        if (Path.GetExtension(craftName) == ".gif")
+                            await Bot.SendVideoAsync(mc_group, fts, 10, 0, 0, null, true, id);
+                        else
+                            await Bot.SendPhotoAsync(mc_group, fts, null, true, id);
+                    }
+                }
+                catch (FileNotFoundException)
+                {
+                    await Bot.SendTextMessageAsync(mc_group, "Ese crafteo no existe o no está implementado, anormal.");
+                }
+                catch (Exception)
+                {
+                    await Bot.SendTextMessageAsync(mc_group, "Algo ha ido mal.");
+                }
+            }
+        }
+
         private static async void BotOnCallbackQueryReceived(object sender, CallbackQueryEventArgs callbackQueryEventArgs)
         {
             await Bot.AnswerCallbackQueryAsync(
@@ -268,49 +314,7 @@ Test Commands:
                 $"Received {callbackQueryEventArgs.CallbackQuery.Data}");
         }
 
-        private static async void BotOnInlineQueryReceived(object sender, InlineQueryEventArgs inlineQueryEventArgs)
-        {
-            Console.WriteLine($"Received inline query from: {inlineQueryEventArgs.InlineQuery.From.Id}");
 
-            InlineQueryResult[] results = {
-                new InlineQueryResultLocation
-                {
-                    Id = "1",
-                    Latitude = 40.7058316f, // displayed result
-                    Longitude = -74.2581888f,
-                    Title = "New York",
-                    InputMessageContent = new InputLocationMessageContent // message if result is selected
-                    {
-                        Latitude = 40.7058316f,
-                        Longitude = -74.2581888f,
-                    }
-                },
-
-                new InlineQueryResultLocation
-                {
-                    Id = "2",
-                    Longitude = 52.507629f, // displayed result
-                    Latitude = 13.1449577f,
-                    Title = "Berlin",
-                    InputMessageContent = new InputLocationMessageContent // message if result is selected
-                    {
-                        Longitude = 52.507629f,
-                        Latitude = 13.1449577f
-                    }
-                }
-            };
-
-            await Bot.AnswerInlineQueryAsync(
-                inlineQueryEventArgs.InlineQuery.Id,
-                results,
-                isPersonal: true,
-                cacheTime: 0);
-        }
-
-        private static void BotOnChosenInlineResultReceived(object sender, ChosenInlineResultEventArgs chosenInlineResultEventArgs)
-        {
-            Console.WriteLine($"Received inline result: {chosenInlineResultEventArgs.ChosenInlineResult.ResultId}");
-        }
 
         private static void BotOnReceiveError(object sender, ReceiveErrorEventArgs receiveErrorEventArgs)
         {
